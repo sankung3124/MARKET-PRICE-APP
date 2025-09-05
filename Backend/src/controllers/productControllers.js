@@ -1,4 +1,4 @@
-import Product from "../models/product";
+import Product from "../models/product.js";
 
 export async function addProduct(req, res) {
   try {
@@ -32,7 +32,7 @@ export async function addProduct(req, res) {
 
 export async function getProducts(req, res) {
   try {
-    const { category, sort, limit = 5, page = 1 } = req.query; // query params
+    const { category, sort, limit = 20, page = 1 } = req.query; // query params
     let filter = {};
     if (category) filter.category = category;
 
@@ -49,7 +49,7 @@ export async function getProducts(req, res) {
 
 export async function getProduct(req, res) {
   try {
-    const { id } = req.param;
+    const { id } = req.params;
     const oneProduct = await Product.findById(id);
     if (!oneProduct)
       return res.status(404).json({ message: "Product not found" });
@@ -61,17 +61,37 @@ export async function getProduct(req, res) {
 
 export async function deleteProduct(req, res) {
   try {
-    const { id } = req.param;
+    const { id } = req.params;
     const deletedProduct = Product.findByIdAndDelete(id);
     if (!deletedProduct)
       return res.status(404).json({ message: "Product not found" });
-    res
-      .status(200)
-      .json({
-        message: "Product deleted successfully",
-        product: deletedProduct,
-      });
+    res.status(200).json({
+      message: "Product deleted successfully",
+      product: deletedProduct,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+}
+
+export async function searchProducts(req, res) {
+  try {
+    const {
+      q,
+      category,
+      minPrice,
+      maxPrice,
+      sort,
+      limit = 20,
+      page = 1,
+    } = req.query;
+    let filter = {};
+    if (q) filter.$or = [{ name: { $regex: q, $options: "i" } }];
+    if (category) filter.category = category;
+    if (minPrice || maxPrice) {
+      filter.currentPrice = {};
+      if (minPrice) filter.currentPrice.$gte = Number(minPrice);
+      if (maxPrice) filter.currentPrice.$lte = Number(maxPrice);
+    }
+  } catch (error) {}
 }

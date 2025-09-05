@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
-import User from "../models/User";
+import User from "../models/User.js";
 
-const protect = async (req, res, next) => {
+export const protect = async (req, res, next) => {
   let token;
 
   if (
@@ -23,5 +23,27 @@ const protect = async (req, res, next) => {
     return res.status(401).json({ message: "Not authorized, no token" });
   }
 };
-
-export default protect;
+export const vendorAuth = (req, res, next) => {
+  if (req.user.role !== "vendor" && req.user.role !== "admin") {
+    return res
+      .status(403)
+      .json({ message: "Access denied. Vendor role required." });
+  }
+  next();
+};
+export const adminAuth = (req, res, next) => {
+  if (req.user.role !== "admin") {
+    return res
+      .status(403)
+      .json({ message: "Access denied. Admin role required." });
+  }
+  next();
+};
+export const userAuth = (req, res, next) => {
+  if (!req.user) {
+    return res
+      .status(403)
+      .json({ message: "Access denied. Authentication required." });
+  }
+  next();
+};

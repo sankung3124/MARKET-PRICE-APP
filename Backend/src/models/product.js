@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose";
+import { model, Schema, mongoose } from "mongoose";
 
 const productSchema = new Schema(
   {

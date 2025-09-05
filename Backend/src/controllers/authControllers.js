@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 
 export async function register(req, res) {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, role = "user", vendorInfo } = req.body;
     if (!username || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -18,16 +18,23 @@ export async function register(req, res) {
       username,
       email,
       password: hashedPassword,
+      role,
+      vendorInfo,
     });
     await user.save();
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );
     res.status(201).json({
       _id: user._id,
       username: user.username,
       email: user.email,
       token: token,
+      role: user.role,
     });
   } catch (error) {
     res
@@ -46,14 +53,19 @@ export async function login(req, res) {
     const user = await User.findOne({ email });
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
+      const token = jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: "1h",
+        }
+      );
       res.json({
         _id: user._id,
         username: user.username,
         email: user.email,
         token: token,
+        role: user.role,
       });
     } else {
       res.status(401).json({ message: "Invalid credentials" });
