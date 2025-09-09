@@ -26,9 +26,35 @@ const productSchema = new Schema(
       ref: "User",
       required: true,
     },
+    market: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Market",
+      required: true, // Products must be associated with a market
+    },
+    priceHistory: [
+      {
+        price: {
+          type: Number,
+          required: true,
+        },
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+        changedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+      },
+    ],
+
     lastUpdated: {
       type: Date,
       default: Date.now,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }
@@ -36,7 +62,19 @@ const productSchema = new Schema(
 
 //indexing
 
-productSchema.index({ category: 1, lastUpdated: -1 });
+// Calculate price change before saving
+productSchema.pre("save", function (next) {
+  if (this.isModified("currentPrice") && this.priceHistory.length > 0) {
+    const previousPrice = this.priceHistory[this.priceHistory.length - 1].price;
+    this.priceChange = this.currentPrice - previousPrice;
+  }
+  next();
+});
+
+// Indexing
+productSchema.index({ category: 1, createdAt: -1 });
+productSchema.index({ vendor: 1, isActive: 1 });
+productSchema.index({ market: 1, isActive: 1 });
 
 const Product = model("Product", productSchema);
 export default Product;

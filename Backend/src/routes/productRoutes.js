@@ -5,15 +5,18 @@ import {
   getProduct,
   deleteProduct,
   searchProducts,
+  updateProduct,
+  getVendorProducts,
 } from "../controllers/productControllers.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, vendorAuth } from "../middleware/authMiddleware.js";
 
 const produtRoutes = Router();
 
-produtRoutes.get("/", protect, getProducts);
-produtRoutes.get("/:id", protect, getProduct);
-produtRoutes.delete("/:id", protect, deleteProduct);
-produtRoutes.post("/", protect, addProduct);
-produtRoutes.get("/search", searchProducts);
+produtRoutes.get("/", getProducts);
+produtRoutes.get("/serach", searchProducts);
+produtRoutes.get("/:id", getProduct);
+produtRoutes.delete("/:id", protect, vendorAuth, deleteProduct);
+produtRoutes.post("/", protect, vendorAuth, addProduct);
+produtRoutes.get("/vendor/my-products", protect, vendorAuth, getVendorProducts);
 
 export default produtRoutes;
