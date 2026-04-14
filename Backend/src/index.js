@@ -4,12 +4,13 @@ import connectToDB from "./config/db.js";
 import userRoutes from "./routes/authRoutes.js";
 import produtRoutes from "./routes/productRoutes.js";
 import cors from "cors";
+import authRoutes from "./routes/authRoutes.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use("/api/auth", userRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/products", produtRoutes);
 const PORT = process.env.PORT || 3000;
 connectToDB();

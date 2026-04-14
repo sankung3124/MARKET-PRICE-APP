@@ -1,0 +1,13 @@
+{
+  "name": "market-price-app",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix ./Frontend/Market-Price run dev",
+    "build": "npm --prefix ./Frontend/Market-Price run build",
+    "preview": "npm --prefix ./Frontend/Market-Price run preview",
+    "lint": "npm --prefix ./Frontend/Market-Price run lint"
+  },
+  "dependencies": {
+    "lucide-react": "^0.562.0"
+  }
+}

@@ -4,7 +4,7 @@ const marketSchema = new Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, "Market name is Required"],
       trim: true,
       unique: true,
     },
@@ -15,7 +15,7 @@ const marketSchema = new Schema(
       },
       city: {
         type: String,
-        required: true,
+        required: [true, "city is required"],
       },
     },
 
