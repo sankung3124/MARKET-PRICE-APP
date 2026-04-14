@@ -1,8 +1,5 @@
 import User from "../models/User.js";
 
-// controllers/userController.js
-import User from "../models/User.js";
-
 // Get all users (Admin only)
 export const getUsers = async (req, res) => {
   try {

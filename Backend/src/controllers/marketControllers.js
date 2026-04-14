@@ -62,7 +62,17 @@ export const updateMarket = async (req, res) => {
       new: true,
       runValidators: true,
     });
-    res.json({ success: true, data: market });
+    if (!market) {
+      return res.status(404).json({
+        success: false,
+        message: "Market not found",
+      });
+    }
+    res.json({
+      success: true,
+      message: "Market updated successfully",
+      data: market,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
