@@ -8,19 +8,29 @@ const productStats = [
 ];
 
 export default function Product() {
-	const [products, setProducts] = useState([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState(null);
+	const [markets, setMarkets] = useState([]);
+	const [formData, setFormData] = useState({
+		name: "",
+		category: "",
+		currentPrice: "",
+		market: ""
+	});
+	const [formLoading, setFormLoading] = useState(false);
+	const [formError, setFormError] = useState("");
 
 	useEffect(() => {
-		const fetchProducts = async () => {
+		const fetchData = async () => {
 			try {
-				const response = await fetch("http://localhost:3000/api/products");
-				if (!response.ok) {
-					throw new Error("Failed to fetch products");
-				}
-				const data = await response.json();
-				setProducts(data);
+				const [productsRes, marketsRes] = await Promise.all([
+					fetch("http://localhost:3000/api/products"),
+					fetch("http://localhost:3000/api/markets")
+				]);
+
+				const productsData = await productsRes.json();
+				const marketsData = await marketsRes.json();
+
+				setProducts(productsData);
+				setMarkets(marketsData);
 			} catch (err) {
 				setError(err.message);
 			} finally {
@@ -28,8 +38,66 @@ export default function Product() {
 			}
 		};
 
-		fetchProducts();
+		fetchData();
 	}, []);
+
+	const handleFormChange = (e) => {
+		setFormData({
+			...formData,
+			[e.target.name]: e.target.value
+		});
+	};
+
+	const handleAddProduct = async (e) => {
+		e.preventDefault();
+		setFormLoading(true);
+		setFormError("");
+
+		try {
+			const token = localStorage.getItem("authUser") ? JSON.parse(localStorage.getItem("authUser")).token : null;
+			if (!token) {
+				setFormError("Please login to add products");
+				return;
+			}
+
+			const response = await fetch("http://localhost:3000/api/products", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"Authorization": `Bearer ${token}`
+				},
+				body: JSON.stringify({
+					name: formData.name,
+					category: formData.category,
+					currentPrice: parseFloat(formData.currentPrice),
+					market: formData.market
+				})
+			});
+
+			const data = await response.json();
+
+			if (response.ok) {
+				// Refresh products list
+				const productsRes = await fetch("http://localhost:3000/api/products");
+				const productsData = await productsRes.json();
+				setProducts(productsData);
+
+				// Reset form
+				setFormData({
+					name: "",
+					category: "",
+					currentPrice: "",
+					market: ""
+				});
+			} else {
+				setFormError(data.message || "Failed to add product");
+			}
+		} catch (error) {
+			setFormError("Network error. Please try again.");
+		} finally {
+			setFormLoading(false);
+		}
+	};
 
 	if (loading) return <div>Loading products...</div>;
 	if (error) return <div>Error: {error}</div>;
@@ -88,25 +156,63 @@ export default function Product() {
 				<div className="form-grid">
 					<div>
 						<label>Product Name</label>
-						<input placeholder="Enter product name" />
+						<input
+							name="name"
+							placeholder="Enter product name"
+							value={formData.name}
+							onChange={handleFormChange}
+							required
+						/>
 					</div>
 					<div>
 						<label>Category</label>
-						<select>
-							<option>Select Category</option>
+						<select
+							name="category"
+							value={formData.category}
+							onChange={handleFormChange}
+							required
+						>
+							<option value="">Select Category</option>
+							<option value="Grains">Grains</option>
+							<option value="Seafood">Seafood</option>
+							<option value="Oils">Oils</option>
+							<option value="Vegetables">Vegetables</option>
 						</select>
 					</div>
 					<div>
 						<label>Market</label>
-						<select>
-							<option>Select Market</option>
+						<select
+							name="market"
+							value={formData.market}
+							onChange={handleFormChange}
+							required
+						>
+							<option value="">Select Market</option>
+							{markets.map(market => (
+								<option key={market._id} value={market._id}>{market.name}</option>
+							))}
 						</select>
 					</div>
 					<div>
 						<label>Price (GMD)</label>
-						<input placeholder="0.00" />
+						<input
+							name="currentPrice"
+							type="number"
+							step="0.01"
+							placeholder="0.00"
+							value={formData.currentPrice}
+							onChange={handleFormChange}
+							required
+						/>
 					</div>
-					<button className="primary-btn">Add Product</button>
+					{formError && <div className="error" style={{gridColumn: '1 / -1'}}>{formError}</div>}
+					<button
+						className="primary-btn"
+						onClick={handleAddProduct}
+						disabled={formLoading}
+					>
+						{formLoading ? "Adding..." : "Add Product"}
+					</button>
 				</div>
 			</div>
 		</section>

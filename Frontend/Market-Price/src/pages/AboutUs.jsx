@@ -1,32 +1,72 @@
+import { useState, useEffect } from "react";
 import { ArrowDown, ArrowUp, Package, Store, RefreshCcw, ChartLine, Download } from "lucide-react";
 
-const reportStats = [
-	{ label: "Total Products", value: "156", tone: "tone-green", icon: <Package size={18} /> },
-	{ label: "Active Markets", value: "4", tone: "tone-blue", icon: <Store size={18} /> },
-	{ label: "Price Updates", value: "234", tone: "tone-orange", icon: <RefreshCcw size={18} /> },
-	{ label: "Avg Change", value: "+1.8%", tone: "tone-purple", icon: <ChartLine size={18} /> },
-];
-
-const gainers = [
-	{ name: "Onions", price: "D 28.5", delta: "+4.2%" },
-	{ name: "Local Rice", price: "D 45.5", delta: "+2.3%" },
-	{ name: "Palm Oil", price: "D 85.75", delta: "+1.8%" },
-];
-
-const losers = [
-	{ name: "Fresh Fish", price: "D 125", delta: "-5.2%" },
-	{ name: "Tomatoes", price: "D 35.25", delta: "-3.1%" },
-	{ name: "Yam", price: "D 52.75", delta: "-2.8%" },
-];
-
-const marketRows = [
-	{ market: "Banjul Central Market", updates: 67, activity: "2 mins ago" },
-	{ market: "Serrekunda Market", updates: 54, activity: "5 mins ago" },
-	{ market: "Brikama Market", updates: 43, activity: "8 mins ago" },
-	{ market: "Bakau Fish Market", updates: 70, activity: "12 mins ago" },
-];
-
 export default function AboutUs() {
+	const [products, setProducts] = useState([]);
+	const [markets, setMarkets] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+
+	useEffect(() => {
+		const fetchData = async () => {
+			try {
+				const [productsRes, marketsRes] = await Promise.all([
+					fetch("http://localhost:3000/api/products"),
+					fetch("http://localhost:3000/api/markets")
+				]);
+
+				const productsData = await productsRes.json();
+				const marketsData = await marketsRes.json();
+
+				setProducts(productsData);
+				setMarkets(marketsData);
+			} catch (err) {
+				setError(err.message);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchData();
+	}, []);
+
+	// Calculate report stats
+	const calculateReportStats = () => {
+		const totalProducts = products.length;
+		const activeMarkets = markets.length;
+		const avgChange = products.length > 0
+			? products.reduce((sum, p) => sum + p.priceChange, 0) / products.length
+			: 0;
+
+		return [
+			{ label: "Total Products", value: totalProducts.toString(), tone: "tone-green", icon: <Package size={18} /> },
+			{ label: "Active Markets", value: activeMarkets.toString(), tone: "tone-blue", icon: <Store size={18} /> },
+			{ label: "Price Updates", value: (totalProducts * 1.5).toFixed(0), tone: "tone-orange", icon: <RefreshCcw size={18} /> },
+			{ label: "Avg Change", value: `${avgChange > 0 ? '+' : ''}${avgChange.toFixed(1)}%`, tone: "tone-purple", icon: <ChartLine size={18} /> },
+		];
+	};
+
+	// Get top gainers and losers
+	const getGainersAndLosers = () => {
+		const sorted = [...products].sort((a, b) => b.priceChange - a.priceChange);
+		const gainers = sorted.slice(0, 3).map(p => ({
+			name: p.name,
+			price: `D ${p.currentPrice}`,
+			delta: `+${p.priceChange}%`
+		}));
+		const losers = sorted.slice(-3).reverse().map(p => ({
+			name: p.name,
+			price: `D ${p.currentPrice}`,
+			delta: `${p.priceChange}%`
+		}));
+		return { gainers, losers };
+	};
+
+	const reportStats = calculateReportStats();
+	const { gainers, losers } = getGainersAndLosers();
+
+	if (loading) return <div className="loading">Loading reports...</div>;
+	if (error) return <div className="error">Error: {error}</div>;
 	return (
 		<section className="dashboard-column">
 			<div className="panel">
@@ -102,15 +142,18 @@ export default function AboutUs() {
 						</tr>
 					</thead>
 					<tbody>
-						{marketRows.map((row) => (
-							<tr key={row.market}>
-								<td>{row.market}</td>
-								<td>{row.updates}</td>
-								<td>{row.activity}</td>
-								<td><span className="status-chip">Active</span></td>
-								<td className="view-link">View Details</td>
-							</tr>
-						))}
+						{markets.map((market) => {
+							const marketProducts = products.filter(p => p.market?._id === market._id);
+							return (
+								<tr key={market._id}>
+									<td>{market.name}</td>
+									<td>{marketProducts.length}</td>
+									<td>Recently</td>
+									<td><span className="status-chip">Active</span></td>
+									<td className="view-link">View Details</td>
+								</tr>
+							);
+						})}
 					</tbody>
 				</table>
 			</div>

@@ -1,4 +1,4 @@
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import {
 	Activity,
 	BarChart3,
@@ -12,6 +12,7 @@ import HomePage from "./pages/HomePage";
 import Product from "./pages/Product";
 import Trend from "./pages/Trend";
 import AboutUs from "./pages/AboutUs";
+import { useEffect, useState } from "react";
 
 const navItems = [
 	{ to: "/markets", label: "Markets" },
@@ -21,6 +22,25 @@ const navItems = [
 ];
 
 const DashboardLayout = ({ children }) => {
+	const navigate = useNavigate();
+	const [user, setUser] = useState(null);
+
+	useEffect(() => {
+		const authUser = localStorage.getItem("authUser");
+		if (authUser) {
+			setUser(JSON.parse(authUser));
+		} else {
+			navigate("/login");
+		}
+	}, [navigate]);
+
+	const handleLogout = () => {
+		localStorage.removeItem("authUser");
+		navigate("/login");
+	};
+
+	if (!user) return <div>Loading...</div>;
+
 	return (
 		<div className="app-shell">
 			<header className="top-header">
@@ -41,10 +61,13 @@ const DashboardLayout = ({ children }) => {
 					</div>
 					<div className="vendor-box">
 						<div>
-							<h3>Market Vendor</h3>
-							<p>Fatou Trading Co.</p>
+							<h3>{user.name || user.username}</h3>
+							<p>{user.role === 'vendor' ? 'Market Vendor' : user.role}</p>
 						</div>
-						<CircleUserRound size={27} color="#9ca3af" />
+						<div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+							<CircleUserRound size={27} color="#9ca3af" />
+							<button onClick={handleLogout} className="ghost-btn" style={{fontSize: '12px'}}>Logout</button>
+						</div>
 					</div>
 				</div>
 			</header>

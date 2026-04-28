@@ -1,36 +1,118 @@
+import { useState, useEffect } from "react";
 import { AlertTriangle, Clock3, TrendingDown, TrendingUp } from "lucide-react";
 
-const trendStats = [
-	{ value: "+1.8%", label: "Average Price Increase", icon: <TrendingUp size={16} />, tone: "stat-green" },
-	{ value: "67%", label: "Products Trending Up", icon: <TrendingUp size={16} />, tone: "stat-blue" },
-	{ value: "12", label: "High Volatility Items", icon: <AlertTriangle size={16} />, tone: "stat-orange" },
-	{ value: "5 min", label: "Update Frequency", icon: <Clock3 size={16} />, tone: "stat-purple" },
-];
-
-const trends = [
-	{ product: "Local Rice", current: "D 45.5", week: "D 44.2", month: "D 42.8", trend: "Up", volatility: "low" },
-	{ product: "Fresh Fish", current: "D 125", week: "D 132", month: "D 128.5", trend: "Down", volatility: "high" },
-	{ product: "Palm Oil", current: "D 85.75", week: "D 84.2", month: "D 89.3", trend: "Up", volatility: "medium" },
-	{ product: "Tomatoes", current: "D 35.25", week: "D 36.4", month: "D 38.9", trend: "Down", volatility: "high" },
-	{ product: "Onions", current: "D 28.5", week: "D 27.3", month: "D 26.8", trend: "Up", volatility: "medium" },
-	{ product: "Groundnut Oil", current: "D 95", week: "D 94.5", month: "D 93.2", trend: "Up", volatility: "low" },
-];
-
-const distributions = [
-	{ name: "Banjul Central Market", value: "D 45.00 avg", width: "60%" },
-	{ name: "Serrekunda Market", value: "D 53.00 avg", width: "70%" },
-	{ name: "Brikama Market", value: "D 61.00 avg", width: "80%" },
-	{ name: "Bakau Fish Market", value: "D 69.00 avg", width: "90%" },
-];
-
-const performances = [
-	{ name: "Grains", change: "+1.2%", up: true },
-	{ name: "Seafood", change: "-2.0%", up: false },
-	{ name: "Oils", change: "+2.8%", up: true },
-	{ name: "Vegetables", change: "-3.6%", up: false },
-];
-
 export default function Trend() {
+	const [products, setProducts] = useState([]);
+	const [markets, setMarkets] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+
+	useEffect(() => {
+		const fetchData = async () => {
+			try {
+				const [productsRes, marketsRes] = await Promise.all([
+					fetch("http://localhost:3000/api/products"),
+					fetch("http://localhost:3000/api/markets")
+				]);
+
+				const productsData = await productsRes.json();
+				const marketsData = await marketsRes.json();
+
+				setProducts(productsData);
+				setMarkets(marketsData);
+			} catch (err) {
+				setError(err.message);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchData();
+	}, []);
+
+	// Calculate trend statistics
+	const calculateTrendStats = () => {
+		if (products.length === 0) return [];
+
+		const upCount = products.filter(p => p.priceChange > 0).length;
+		const upPercentage = Math.round((upCount / products.length) * 100);
+		const avgChange = products.reduce((sum, p) => sum + p.priceChange, 0) / products.length;
+
+		return [
+			{
+				value: `${avgChange > 0 ? '+' : ''}${avgChange.toFixed(1)}%`,
+				label: "Average Price Change",
+				icon: <TrendingUp size={16} />,
+				tone: "stat-green"
+			},
+			{
+				value: `${upPercentage}%`,
+				label: "Products Trending Up",
+				icon: <TrendingUp size={16} />,
+				tone: "stat-blue"
+			},
+			{
+				value: products.filter(p => Math.abs(p.priceChange) > 5).length.toString(),
+				label: "High Volatility Items",
+				icon: <AlertTriangle size={16} />,
+				tone: "stat-orange"
+			},
+			{
+				value: "5 min",
+				label: "Update Frequency",
+				icon: <Clock3 size={16} />,
+				tone: "stat-purple"
+			},
+		];
+	};
+
+	// Calculate market distributions
+	const calculateDistributions = () => {
+		const marketPrices = {};
+		products.forEach(product => {
+			const marketName = product.market?.name || 'Unknown';
+			if (!marketPrices[marketName]) {
+				marketPrices[marketName] = [];
+			}
+			marketPrices[marketName].push(product.currentPrice);
+		});
+
+		return Object.entries(marketPrices).map(([name, prices]) => {
+			const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+			return {
+				name,
+				value: `D ${avg.toFixed(2)} avg`,
+				width: `${Math.min(90, 40 + (avg / 100) * 50)}%`
+			};
+		});
+	};
+
+	// Calculate category performances
+	const calculatePerformances = () => {
+		const categoryChanges = {};
+		products.forEach(product => {
+			if (!categoryChanges[product.category]) {
+				categoryChanges[product.category] = [];
+			}
+			categoryChanges[product.category].push(product.priceChange);
+		});
+
+		return Object.entries(categoryChanges).map(([name, changes]) => {
+			const avgChange = changes.reduce((sum, change) => sum + change, 0) / changes.length;
+			return {
+				name,
+				change: `${avgChange > 0 ? '+' : ''}${avgChange.toFixed(1)}%`,
+				up: avgChange > 0
+			};
+		});
+	};
+
+	const trendStats = calculateTrendStats();
+	const distributions = calculateDistributions();
+	const performances = calculatePerformances();
+
+	if (loading) return <div className="loading">Loading trend data...</div>;
+	if (error) return <div className="error">Error: {error}</div>;
 	return (
 		<section className="dashboard-column">
 			<div className="panel">
@@ -77,17 +159,20 @@ export default function Trend() {
 						</tr>
 					</thead>
 					<tbody>
-						{trends.map((row) => (
-							<tr key={row.product}>
-								<td>{row.product}</td>
-								<td>{row.current}</td>
-								<td>{row.week}</td>
-								<td>{row.month}</td>
-								<td className={row.trend === "Up" ? "up-text" : "down-text"}>
-									{row.trend === "Up" ? <TrendingUp size={14} /> : <TrendingDown size={14} />} {row.trend}
+						{products.slice(0, 6).map((product) => (
+							<tr key={product._id}>
+								<td>{product.name}</td>
+								<td>D {product.currentPrice}</td>
+								<td>D {(product.currentPrice * (1 - product.priceChange / 100)).toFixed(2)}</td>
+								<td>D {(product.currentPrice * (1 - product.priceChange / 50)).toFixed(2)}</td>
+								<td className={product.priceChange >= 0 ? "up-text" : "down-text"}>
+									{product.priceChange >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+									{product.priceChange >= 0 ? "Up" : "Down"}
 								</td>
 								<td>
-									<span className={`volatility ${row.volatility}`}>{row.volatility}</span>
+									<span className={`volatility ${Math.abs(product.priceChange) > 5 ? "high" : Math.abs(product.priceChange) > 2 ? "medium" : "low"}`}>
+										{Math.abs(product.priceChange) > 5 ? "high" : Math.abs(product.priceChange) > 2 ? "medium" : "low"}
+									</span>
 								</td>
 							</tr>
 						))}

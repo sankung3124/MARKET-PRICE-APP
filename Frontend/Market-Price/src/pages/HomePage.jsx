@@ -1,83 +1,58 @@
+import { useState, useEffect } from "react";
 import { Landmark, UserRound, Clock3, Search, Sprout, Fish, Droplets, Leaf } from "lucide-react";
 
-const markets = [
-	{ name: "Banjul Central Market", updated: "2 mins ago" },
-	{ name: "Serrekunda Market", updated: "5 mins ago" },
-	{ name: "Brikama Market", updated: "8 mins ago" },
-	{ name: "Bakau Fish Market", updated: "12 mins ago" },
-];
-
-const categories = [
-	{ icon: Sprout, title: "Grains", count: "12 products" },
-	{ icon: Fish, title: "Seafood", count: "8 products" },
-	{ icon: Droplets, title: "Oils", count: "6 products" },
-	{ icon: Leaf, title: "Vegetables", count: "15 products" },
-];
-
-const currentPrices = [
-	{
-		name: "Local Rice",
-		category: "Grains",
-		price: "D 45.5",
-		delta: "+2.3%",
-		deltaClass: "up",
-		market: "Banjul Central Market",
-		trader: "Fatou Trading",
-		updated: "Updated 2 mins ago",
-	},
-	{
-		name: "Fresh Fish",
-		category: "Seafood",
-		price: "D 125",
-		delta: "-5.2%",
-		deltaClass: "down",
-		market: "Bakau Fish Market",
-		trader: "Omar Fisheries",
-		updated: "Updated 5 mins ago",
-	},
-	{
-		name: "Palm Oil",
-		category: "Oils",
-		price: "D 85.75",
-		delta: "+1.8%",
-		deltaClass: "up",
-		market: "Serrekunda Market",
-		trader: "Aminata Oils",
-		updated: "Updated 3 mins ago",
-	},
-	{
-		name: "Tomatoes",
-		category: "Vegetables",
-		price: "D 35.25",
-		delta: "-3.1%",
-		deltaClass: "down",
-		market: "Brikama Market",
-		trader: "Lamin Vegetables",
-		updated: "Updated 7 mins ago",
-	},
-	{
-		name: "Onions",
-		category: "Vegetables",
-		price: "D 28.5",
-		delta: "+4.2%",
-		deltaClass: "up",
-		market: "Banjul Central Market",
-		trader: "Isatou Trading",
-		updated: "Updated 4 mins ago",
-	},
-	{
-		name: "Groundnut Oil",
-		category: "Oils",
-		price: "D 95",
-		delta: "+0.5%",
-		deltaClass: "up",
-		market: "Serrekunda Market",
-		trader: "Bakary Oils Ltd",
-		updated: "Updated 6 mins ago",
-	},
-];
+const categoryIcons = {
+	Grains: Sprout,
+	Seafood: Fish,
+	Oils: Droplets,
+	Vegetables: Leaf,
+};
 
 export default function HomePage() {
+	const [markets, setMarkets] = useState([]);
+	const [products, setProducts] = useState([]);
+	const [categories, setCategories] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+
+	useEffect(() => {
+		const fetchData = async () => {
+			try {
+				// Fetch markets
+				const marketsResponse = await fetch("http://localhost:3000/api/markets");
+				const marketsData = await marketsResponse.json();
+				setMarkets(marketsData);
+
+				// Fetch products
+				const productsResponse = await fetch("http://localhost:3000/api/products");
+				const productsData = await productsResponse.json();
+				setProducts(productsData);
+
+				// Calculate categories from products
+				const categoryCount = {};
+				productsData.forEach(product => {
+					categoryCount[product.category] = (categoryCount[product.category] || 0) + 1;
+				});
+
+				const categoriesData = Object.entries(categoryCount).map(([title, count]) => ({
+					title,
+					count: `${count} products`,
+					icon: categoryIcons[title] || Sprout,
+				}));
+				setCategories(categoriesData);
+
+			} catch (err) {
+				setError(err.message);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchData();
+	}, []);
+
+	if (loading) return <div className="loading">Loading market data...</div>;
+	if (error) return <div className="error">Error: {error}</div>;
 	return (
 		<section className="dashboard-column">
 			<div className="panel">
@@ -91,12 +66,12 @@ export default function HomePage() {
 
 				<div className="market-status-grid">
 					{markets.map((market) => (
-						<article key={market.name} className="market-status-card">
+						<article key={market._id} className="market-status-card">
 							<div className="market-row">
 								<strong>{market.name}</strong>
 								<span className="market-active-dot">Active</span>
 							</div>
-							<p>Last update: {market.updated}</p>
+							<p>Last update: Recently</p>
 						</article>
 					))}
 				</div>
@@ -138,19 +113,21 @@ export default function HomePage() {
 			</div>
 
 			<div className="price-card-grid compact">
-				{currentPrices.map((item) => (
-					<article key={item.name} className="price-info-card">
+				{products.slice(0, 6).map((item) => (
+					<article key={item._id} className="price-info-card">
 						<div className="price-card-top">
 							<h3>{item.name}</h3>
 							<span className="soft-tag">{item.category}</span>
 						</div>
 						<div className="price-number">
-							{item.price}
-							<span className={`delta ${item.deltaClass}`}>{item.delta}</span>
+							D {item.currentPrice}
+							<span className={`delta ${item.priceChange >= 0 ? "up" : "down"}`}>
+								{item.priceChange > 0 ? `+${item.priceChange}%` : `${item.priceChange}%`}
+							</span>
 						</div>
-						<div className="meta-row"><Landmark size={14} /> {item.market}</div>
-						<div className="meta-row"><UserRound size={14} /> {item.trader}</div>
-						<div className="meta-row"><Clock3 size={14} /> {item.updated}</div>
+						<div className="meta-row"><Landmark size={14} /> {item.market?.name}</div>
+						<div className="meta-row"><UserRound size={14} /> {item.vendor?.username}</div>
+						<div className="meta-row"><Clock3 size={14} /> Recently updated</div>
 					</article>
 				))}
 			</div>
