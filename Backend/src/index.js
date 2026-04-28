@@ -3,6 +3,7 @@ import "dotenv/config";
 import connectToDB from "./config/db.js";
 import userRoutes from "./routes/authRoutes.js";
 import produtRoutes from "./routes/productRoutes.js";
+import marketRoutes from "./routes/marketRoutes.js";
 import cors from "cors";
 
 const app = express();
@@ -11,6 +12,7 @@ app.use(express.json());
 
 app.use("/api/auth", userRoutes);
 app.use("/api/products", produtRoutes);
+app.use("/api/markets", marketRoutes);
 const PORT = process.env.PORT || 3000;
 connectToDB();
 

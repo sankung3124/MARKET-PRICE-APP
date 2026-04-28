@@ -2,39 +2,40 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { BarChart3 } from "lucide-react";
 
-const MOCK_CREDENTIALS = {
-  email: "vendor@markettracker.gm",
-  password: "Demo@12345",
-};
-
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
-    const normalizedEmail = email.trim().toLowerCase();
-    if (
-      normalizedEmail === MOCK_CREDENTIALS.email &&
-      password === MOCK_CREDENTIALS.password
-    ) {
-      localStorage.setItem(
-        "mockAuthUser",
-        JSON.stringify({
-          email: MOCK_CREDENTIALS.email,
-          name: "Fatou Trading Co.",
-          role: "Market Vendor",
-        })
-      );
-      setError("");
-      navigate("/markets");
-      return;
+    try {
+      const response = await fetch("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("authUser", JSON.stringify(data));
+        navigate("/markets");
+      } else {
+        setError(data.message || "Login failed");
+      }
+    } catch (error) {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setError("Invalid demo credentials. Please use the mock account details.");
   };
 
   return (

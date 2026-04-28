@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+
 const productStats = [
 	{ value: "156", label: "Total Products", tone: "stat-green" },
 	{ value: "42", label: "Categories", tone: "stat-blue" },
@@ -5,16 +7,32 @@ const productStats = [
 	{ value: "4", label: "Active Markets", tone: "stat-purple" },
 ];
 
-const products = [
-	{ name: "Local Rice", category: "Grains", market: "Banjul Central Market", vendor: "Fatou Trading", price: "D 45.5", change: "+2.3%" },
-	{ name: "Fresh Fish", category: "Seafood", market: "Bakau Fish Market", vendor: "Omar Fisheries", price: "D 125", change: "-5.2%" },
-	{ name: "Palm Oil", category: "Oils", market: "Serrekunda Market", vendor: "Aminata Oils", price: "D 85.75", change: "+1.8%" },
-	{ name: "Tomatoes", category: "Vegetables", market: "Brikama Market", vendor: "Lamin Vegetables", price: "D 35.25", change: "-3.1%" },
-	{ name: "Onions", category: "Vegetables", market: "Banjul Central Market", vendor: "Isatou Trading", price: "D 28.5", change: "+4.2%" },
-	{ name: "Groundnut Oil", category: "Oils", market: "Serrekunda Market", vendor: "Bakary Oils Ltd", price: "D 95", change: "+0.5%" },
-];
-
 export default function Product() {
+	const [products, setProducts] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+
+	useEffect(() => {
+		const fetchProducts = async () => {
+			try {
+				const response = await fetch("http://localhost:3000/api/products");
+				if (!response.ok) {
+					throw new Error("Failed to fetch products");
+				}
+				const data = await response.json();
+				setProducts(data);
+			} catch (err) {
+				setError(err.message);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchProducts();
+	}, []);
+
+	if (loading) return <div>Loading products...</div>;
+	if (error) return <div>Error: {error}</div>;
 	return (
 		<section className="dashboard-column">
 			<div className="panel">
@@ -41,9 +59,9 @@ export default function Product() {
 
 			<div className="product-grid">
 				{products.map((item) => (
-					<article key={item.name} className="product-card">
-						<span className={`tiny-change ${item.change.startsWith("-") ? "down" : "up"}`}>
-							{item.change}
+					<article key={item._id} className="product-card">
+						<span className={`tiny-change ${item.priceChange < 0 ? "down" : "up"}`}>
+							{item.priceChange > 0 ? `+${item.priceChange}%` : `${item.priceChange}%`}
 						</span>
 						<img
 							src="https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=800&q=80"
@@ -54,11 +72,11 @@ export default function Product() {
 								<h3>{item.name}</h3>
 								<span className="soft-tag">{item.category}</span>
 							</div>
-							<h4>{item.price}</h4>
-							<p>{item.market}</p>
+							<h4>D {item.currentPrice}</h4>
+							<p>{item.market?.name}</p>
 							<div className="time-row">
-								<span>{item.vendor}</span>
-								<span>{item.name === "Local Rice" ? "2 mins ago" : item.name === "Fresh Fish" ? "5 mins ago" : item.name === "Palm Oil" ? "3 mins ago" : item.name === "Tomatoes" ? "7 mins ago" : item.name === "Onions" ? "4 mins ago" : "6 mins ago"}</span>
+								<span>{item.vendor?.username}</span>
+								<span>Recently updated</span>
 							</div>
 						</div>
 					</article>

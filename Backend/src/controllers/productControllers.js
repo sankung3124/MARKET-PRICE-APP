@@ -46,6 +46,8 @@ export async function getProducts(req, res) {
     if (category) filter.category = category;
 
     const products = await Product.find(filter)
+      .populate('market', 'name')
+      .populate('vendor', 'username')
       .sort(sort ? { [sort]: 1 } : {})
       .skip((page - 1) * limit)
       .limit(Number(limit));
